@@ -32,7 +32,7 @@ func AddRouter(url string, handler controller.HandlerInterface) {
 	//	http.Handle(url, middlewareHandler(http.HandlerFunc(handler)))
 	env := &controller.Env{}
 	controller.MapHandler[url] = &handler
-	http.Handle(url, &controller.Handler{env, nil, handler.Get})
+	http.Handle(url, &controller.Handler{env, nil, handler.Get, handler.Post})
 }
 
 func Run() {

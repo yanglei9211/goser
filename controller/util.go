@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 	"strings"
+	"time"
 )
 
 type Error interface {
@@ -44,6 +44,7 @@ func (h *Handler) SetCtx(ctx *Context) {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	err := h.H(h.Env, w, r)
 	if err != nil {
 		switch e := err.(type) {
@@ -55,6 +56,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.StatusInternalServerError)
 		}
 	}
+	dur := time.Since(start)
+	u := strings.Split(r.URL.String(), "?")
+	log.Printf("%s\t%s\t%s\n", r.Method, u[0], dur)
 }
 
 //func (h Handler) innerFunc(e *Env, w http.ResponseWriter, r *http.Request) (er error) {
@@ -71,7 +75,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) H(env *Env, w http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
 		if er := recover(); er != nil {
-			err = StatusError{Code: 500, Err: errors.New(fmt.Sprintf("%s", er))}
+			//v := reflect.ValueOf(er)
+			if e, ok := er.(StatusError); ok {
+				err = e
+			} else {
+				err = StatusError{Code: 500, Err: errors.New(fmt.Sprintf("%s", er))}
+			}
 			//err = errors.New("inner error")
 		}
 	}()
@@ -85,7 +94,19 @@ func (h *Handler) H(env *Env, w http.ResponseWriter, r *http.Request) (err error
 		ctx.SetCtxRw(w)
 		ctx.SetCtxReq(r)
 		(*handlerInfo).SetCtx(&ctx)
-		(*handlerInfo).Get()
+		method := r.Method
+		switch method {
+		case "GET":
+			(*handlerInfo).Get()
+			return nil
+		case "POST":
+			(*handlerInfo).Post()
+			return nil
+		default:
+			http.Error(w, http.StatusText(http.StatusNotFound),
+				http.StatusNotFound)
+			return nil
+		}
 		return nil
 	}
 
@@ -106,12 +127,21 @@ type BaseHandler struct {
 }
 
 func (b BaseHandler) Get() {
-	fmt.Println("mid do get")
+	err := StatusError{Code: 405, Err: errors.New("method not allowed")}
+	panic(err)
+	//panic("http error 405, method not allowed")
+}
+
+func (b BaseHandler) Post() {
+	err := StatusError{Code: 405, Err: errors.New("method not allowed")}
+	panic(err)
 }
 
 type HandlerInterface interface {
 	Get()
+	Post()
 	SetCtx(*Context)
+	//	todo more method
 }
 
 //type HandlerInterface interface {
@@ -129,3 +159,20 @@ type HandlerInterface interface {
 //}
 
 var MapHandler map[string]*HandlerInterface
+
+func middlewareHandler(next http.Handler) http.Handler {
+	//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+	//    // 执行handler之前的逻辑
+	//    next.ServeHTTP(w, r)
+	//    // 执行完毕handler后的逻辑
+	//})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		dur := time.Since(start)
+		u := strings.Split(r.URL.String(), "?")
+		fmt.Println(u)
+		//panic("error")
+		log.Printf("%s\t%s\t%s\n", r.Method, u[0], dur)
+	})
+}

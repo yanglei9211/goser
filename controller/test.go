@@ -16,13 +16,13 @@ func FirstHandler2(env *Env, w http.ResponseWriter, r *http.Request) error {
 }
 
 type FirstHandler struct {
-	Handler
+	BaseHandler
 }
 
 func (h *FirstHandler) Get() {
 	h.Ctx.Req.ParseForm()
 	x := 12
-	y := 0
+	y := 45
 	fmt.Println(x / y)
 	fmt.Println("read do get")
 	h.Ctx.Rw.Write([]byte("rec ok 1111111"))
