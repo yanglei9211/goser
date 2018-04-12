@@ -20,10 +20,10 @@ type FirstHandler struct {
 }
 
 func (h *FirstHandler) Get() {
-	h.Ctx.Req.ParseForm()
-	x := 12
-	y := 45
-	fmt.Println(x / y)
-	fmt.Println("read do get")
-	h.Ctx.Rw.Write([]byte("rec ok 1111111"))
+	var x, y int
+	MustInt(&x, h.Query("x"))
+	MustInt(&y, h.Query("y"))
+	h.writeResponse(map[string]interface{}{
+		"rec": x + y,
+	})
 }

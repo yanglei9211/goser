@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -37,6 +38,11 @@ type Handler struct {
 	Get  func()
 	Post func()
 	//	todo more method
+}
+
+func (h Handler) Query(arg string) string {
+	res := h.Ctx.Req.Form.Get(arg)
+	return res
 }
 
 func (h *Handler) SetCtx(ctx *Context) {
@@ -90,6 +96,7 @@ func (h *Handler) H(env *Env, w http.ResponseWriter, r *http.Request) (err error
 			http.StatusNotFound)
 		return nil
 	} else {
+		r.ParseForm()
 		ctx := Context{}
 		ctx.SetCtxRw(w)
 		ctx.SetCtxReq(r)
@@ -137,6 +144,18 @@ func (b BaseHandler) Post() {
 	panic(err)
 }
 
+func (b BaseHandler) writeResponse(r map[string]interface{}) {
+	response, err := json.Marshal(
+		map[string]interface{}{
+			"status": 1,
+			"data":   r,
+		})
+	if err != nil {
+		panic(err)
+	}
+	b.Ctx.Rw.Write([]byte(string(response)))
+}
+
 type HandlerInterface interface {
 	Get()
 	Post()
@@ -159,20 +178,3 @@ type HandlerInterface interface {
 //}
 
 var MapHandler map[string]*HandlerInterface
-
-func middlewareHandler(next http.Handler) http.Handler {
-	//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-	//    // 执行handler之前的逻辑
-	//    next.ServeHTTP(w, r)
-	//    // 执行完毕handler后的逻辑
-	//})
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		dur := time.Since(start)
-		u := strings.Split(r.URL.String(), "?")
-		fmt.Println(u)
-		//panic("error")
-		log.Printf("%s\t%s\t%s\n", r.Method, u[0], dur)
-	})
-}
