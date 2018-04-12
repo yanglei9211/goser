@@ -1,0 +1,8 @@
+httpport = 8102
+db_host="10.200.2.234"
+[math]
+db_name="klx_xmath"
+item_engine_host="10.200.3.118:7101"
+[physics]
+db_name="klx_xph"
+item_engine_host="10.200.3.118:7201"
